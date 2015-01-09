@@ -216,7 +216,11 @@ class ComposerExtension(ExtensionHelper):
                 'HOME': self._ctx['BUILD_DIR'],
                 'COMPOSER_VENDOR_DIR': self._ctx['COMPOSER_VENDOR_DIR'],
                 'COMPOSER_BIN_DIR': self._ctx['COMPOSER_BIN_DIR'],
-                'COMPOSER_CACHE_DIR': self._ctx['COMPOSER_CACHE_DIR']
+                'COMPOSER_CACHE_DIR': self._ctx['COMPOSER_CACHE_DIR'],
+                'http_proxy': os.environ['http_proxy'],
+                'https_proxy': os.environ['https_proxy'],
+                'HTTP_PROXY': os.environ['HTTP_PROXY'],
+                'HTTPS_PROXY': os.environ['HTTPS_PROXY']
             }
             composerCmd = [phpPath,
                            '-c "%s"' % phpCfg,
