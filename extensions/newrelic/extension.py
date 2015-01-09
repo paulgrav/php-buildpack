@@ -43,6 +43,7 @@ class NewRelicInstaller(object):
         self._detected = False
         self.app_name = None
         self.license_key = None
+        self.proxy = None
         try:
             self._log.info("Initializing")
             if ctx['PHP_VM'] == 'php':
@@ -108,6 +109,15 @@ class NewRelicInstaller(object):
                                          'daemon.pid')
             self._log.debug("Pid File [%s]", self.pid_path)
 
+            self.proxy = self._find_proxy()
+
+    def _find_proxy(self):
+        try:
+            proxy = "{username}:{password}@{host}:{port}".format(**self._ctx['VCAP_SERVICES']["proxy"]["credentials"])
+        except KeyError:
+            proxy = None
+        return proxy
+
     def _load_php_info(self):
         self.php_ini_path = os.path.join(self._ctx['BUILD_DIR'],
                                          'php', 'etc', 'php.ini')
@@ -150,6 +160,10 @@ class NewRelicInstaller(object):
         lines.append('newrelic.daemon.location=%s\n' % self.daemon_path)
         lines.append('newrelic.daemon.port=%s\n' % self.socket_path)
         lines.append('newrelic.daemon.pidfile=%s\n' % self.pid_path)
+
+        if self.proxy:
+            lines.append('newrelic.daemon.proxy=%s\n' % self.proxy)
+
         with open(self.php_ini_path, 'wt') as php_ini:
             for line in lines:
                 php_ini.write(line)
