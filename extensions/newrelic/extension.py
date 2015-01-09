@@ -112,10 +112,13 @@ class NewRelicInstaller(object):
             self.proxy = self._find_proxy()
 
     def _find_proxy(self):
-        try:
-            proxy = "{username}:{password}@{host}:{port}".format(**self._ctx['VCAP_SERVICES']["proxy"]["credentials"])
-        except KeyError:
-            proxy = None
+        proxycredentials = self._ctx.get('VCAP_SERVICES', {}).get("proxy",{})
+        proxy = None
+        if proxycredentials:
+            try:
+                proxy = "{username}:{password}@{host}:{port}".format(**proxycredentials[0].get("credentials"))
+            except (IndexError, KeyError, TypeError):
+                proxy = None
         return proxy
 
     def _load_php_info(self):
