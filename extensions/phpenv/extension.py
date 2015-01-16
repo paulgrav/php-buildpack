@@ -19,7 +19,7 @@ class PHPConfigChooser(PHPExtensionHelper):
         self.env_specific_ini = os.path.join(self._ctx['BUILD_DIR'],
                                       'php','etc','php-%s.ini' % env )
 
-        if os.path.exists(env_specific_ini):
+        if os.path.exists(self.env_specific_ini):
             return True
 
         return False
