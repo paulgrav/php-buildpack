@@ -11,17 +11,23 @@ class PHPConfigChooser(PHPExtensionHelper):
         PHPExtensionHelper.__init__(self, ctx)
 
     def _configure(self):
+        """Check to see if the ENV environment variable is set. If it is
+        then we look for php-${ENV}.ini and try to use that for the php.ini """
 
         if not os.environ.get('ENV'):
             return
 
         env = os.environ.get('ENV')
-        php_ini_path = os.path.join(self._ctx['BUILD_DIR'],
+        _log.info('Found ENV: %s' % env)
+        original_ini = os.path.join(self._ctx['BUILD_DIR'],
                                          'php', 'etc', 'php.ini')
-        new_ini_path = os.path.join(self._ctx['BUILD_DIR'],
+        env_specific_ini = os.path.join(self._ctx['BUILD_DIR'],
                                         'php','etc','php-%s.ini' % env )
-        os.rename(new_ini_path, php_ini_path)
-
+        if os.path.exists(env_specific_ini):
+            os.rename(env_specific_ini, original_ini)
+            _log.info('Renamed %s to %s' % (env_specific_ini, original_ini))
+        else:
+            _log.info('%s not found' % env_specific_ini)
 
 # Register extension methods
 PHPConfigChooser.register(__name__)
