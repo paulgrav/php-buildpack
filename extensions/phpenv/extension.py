@@ -14,10 +14,10 @@ class PHPConfigChooser(PHPExtensionHelper):
         """Check to see if the ENV environment variable is set. If it is
         then we look for php-${ENV}.ini and try to use that for the php.ini """
 
-        if not os.environ.get('ENV'):
+        if not self._ctx.get('ENV'):
             return
 
-        env = os.environ.get('ENV')
+        env = self._ctx.get('ENV')
         _log.info('Found ENV: %s' % env)
         original_ini = os.path.join(self._ctx['BUILD_DIR'],
                                          'php', 'etc', 'php.ini')
