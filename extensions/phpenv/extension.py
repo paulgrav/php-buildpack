@@ -1,5 +1,7 @@
 from extension_helpers import PHPExtensionHelper
 import os
+import os
+import logging
 
 _log = logging.getLogger('PHPConfigChooser')
 
