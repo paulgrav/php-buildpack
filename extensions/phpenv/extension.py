@@ -14,8 +14,8 @@ class PHPConfigChooser(PHPExtensionHelper):
         if not self._ctx.get('ENV'):
             return False
 
-        _log.info('Found ENV: %s' % env)
         env = self._ctx.get('ENV')
+        _log.info('Found ENV: %s' % env)
         self.env_specific_ini = os.path.join(self._ctx['BUILD_DIR'],
                                       'php','etc','php-%s.ini' % env )
 
