@@ -1,6 +1,6 @@
 from extension_helpers import PHPExtensionHelper
 import os
-import os
+import glob
 import logging
 
 _log = logging.getLogger('PHPConfigChooser')
@@ -14,26 +14,28 @@ class PHPConfigChooser(PHPExtensionHelper):
         if not self._ctx.get('ENV'):
             return False
 
-        env = self._ctx.get('ENV')
-        _log.info('Found ENV: %s' % env)
+        if not self._ctx.get('PHP_INI_SCAN_DIR'):
+            return False
 
-        self.env_specific_ini = os.path.join(self._ctx['BUILD_DIR'],
-                                      'php','etc','php-%s.ini' % env )
-        _log.info('Looking for: %s' % self.env_specific_ini)
-        if os.path.exists(self.env_specific_ini):
-            return True
+        self.env = self._ctx.get('ENV')
+        self.iniscandir = self._ctx.get('PHP_INI_SCAN_DIR')
+        _log.info('Found ENV: %s' % self.env)
+        _log.info('Found PHP_INI_SCAN_DIR: %s' % self.iniscandir)
+        # 1. get all ini files in the scan dir
+        # 2. remove all env-\w+.ini that don’t match the $ENV
 
-        return False
+        return True
 
     def _compile(self, install):
         """Check to see if the ENV environment variable is set. If it is
-        then we look for php-${ENV}.ini and try to use that for the php.ini """
+        then we look for env-${ENV}.ini and try to use that for the php.ini """
 
-        original_ini = os.path.join(self._ctx['BUILD_DIR'],
-                                         'php', 'etc', 'php.ini')
-        os.rename(self.env_specific_ini, original_ini)
-        _log.info('Renamed %s to %s' % (self.env_specific_ini, original_ini))
-        install.package('PHPENV')
+        iniscanglob = os.path.join(self.iniscandir,'env-*.ini')
+        envini = os.path.join(self.iniscanglob, 'env-%s.ini' % self.env)
+        for i in glob.glob(iniscanglob):
+            if i != envini:
+                _log.info('Removed: %s' % i)
+                os.remove(i)
 
 # Register extension methods
 PHPConfigChooser.register(__name__)
