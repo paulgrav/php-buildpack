@@ -32,8 +32,10 @@ class PHPConfigChooser(PHPExtensionHelper):
         then we look for env-${ENV}.ini and try to use that for the php.ini """
 
         iniscanglob = os.path.join(self.iniscandir,'env-*.ini')
-        envini = os.path.join(iniscanglob, 'env-%s.ini' % self.env)
+        envini = os.path.join(self.iniscandir, 'env-%s.ini' % self.env)
+        _log.info('Searching: %s' % iniscanglob)
         for i in glob.glob(iniscanglob):
+            _log.info('Found: %s' % i)
             if i != envini:
                 _log.info('Removed: %s' % i)
                 os.remove(i)
