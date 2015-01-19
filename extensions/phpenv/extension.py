@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from extension_helpers import PHPExtensionHelper
 import os
 import glob
