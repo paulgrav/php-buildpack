@@ -40,7 +40,7 @@ class PHPConfigChooser(PHPExtensionHelper):
 
     def _compile(self, install):
 
-        phpini_confd_path = os.path.join(self._ctx.get('HOME'),'app','php','etc','conf.d')
+        phpini_confd_path = os.path.join(self._ctx.get('BUILD_DIR'),'php','etc','conf.d')
         phpini_scan_dir = self._ctx.get('PHP_INI_SCAN_DIR')
 
         self._clearout_ini(phpini_confd_path, self.env)
