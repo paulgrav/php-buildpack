@@ -26,6 +26,7 @@ class PHPConfigChooser(PHPExtensionHelper):
         specified environment.
         """
         if not os.path.exists(path):
+            _log.info('Path not found: %s' % path)
             return
 
         iniscanglob = os.path.join(path,'env-*.ini')
