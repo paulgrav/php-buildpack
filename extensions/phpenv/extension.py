@@ -15,30 +15,36 @@ class PHPConfigChooser(PHPExtensionHelper):
         if not self._ctx.get('ENV'):
             return False
 
-        if not self._ctx.get('PHP_INI_SCAN_DIR'):
-            return False
-
         self.env = self._ctx.get('ENV')
-        self.iniscandir = self._ctx.get('PHP_INI_SCAN_DIR')
         _log.info('Found ENV: %s' % self.env)
-        _log.info('Found PHP_INI_SCAN_DIR: %s' % self.iniscandir)
-        # 1. get all ini files in the scan dir
-        # 2. remove all env-\w+.ini that don’t match the $ENV
 
         return True
 
-    def _compile(self, install):
-        """Check to see if the ENV environment variable is set. If it is
-        then we look for env-${ENV}.ini and try to use that for the php.ini """
+    def _clearout_ini(self, path, env):
+        """Looks at the specified path of ini files matching env-(dev|stage|prod)
+        and deletes the environment specific ini files that do not match the
+        specified environment.
+        """
+        if not os.path.exists(path):
+            return
 
-        iniscanglob = os.path.join(self.iniscandir,'env-*.ini')
-        envini = os.path.join(self.iniscandir, 'env-%s.ini' % self.env)
-        _log.info('Searching: %s' % iniscanglob)
+        iniscanglob = os.path.join(path,'env-*.ini')
+        envini = os.path.join(path, 'env-%s.ini' % env)
+        _log.info('Searching: %s' % path)
         for i in glob.glob(iniscanglob):
             _log.info('Found: %s' % i)
             if i != envini:
-                _log.info('Removed: %s' % i)
                 os.remove(i)
+                _log.info('Removed: %s' % i)
+
+    def _compile(self, install):
+
+        phpini_confd_path = os.path.join(self._ctx.get('HOME'),'app','php','etc','conf.d')
+        phpini_scan_dir = self._ctx.get('PHP_INI_SCAN_DIR')
+
+        self._clearout_ini(phpini_confd_path, self.env)
+        self._clearout_ini(phpini_scan_dir, self.env)
+
 
 # Register extension methods
 PHPConfigChooser.register(__name__)
