@@ -12,8 +12,8 @@ To get setup developing the build pack, you'll need some tools.  Here's the setu
 With those tools installed, you should be able to run these commands to get up and running.
 
 ```bash
-git clone https://github.com/dmikusa-pivotal/cf-php-build-pack
-cd cf-php-build-pack
+git clone https://github.com/cloudfoundry/php-buildpack
+cd php-buildpack
 python -V  # should report 2.6.6, if not fix PyEnv before creating the virtualenv
 virtualenv `pwd`/env
 . ./env/bin/activate
@@ -180,6 +180,19 @@ def compile(install):
 
 ### Testing
 
+#### Preqrequisites
+
+Integration tests expect to have a web server running on port 5000.  This is where they will download binaries.  Tests will fail if the server is not running.
+
+In a separate shell:
+```shell
+cd path/to/php-buildpack
+./bin/binaries download binaries/lucid
+python -m SimpleHTTPServer 5000
+```
+
+#### Running tests
+
 The build pack makes use of [Nose] for testing.  You can run the full suite of tests with this command.
 
 ```
@@ -196,8 +209,6 @@ To debug tests or see the output, you can run with the `-s` option.  This will p
 
 Data for all tests is stored under `tests/data`.
 
-Integration tests expect to have a web server running on port 5000.  This is where they will download binaries.  Tests will fail if the server is not running.
-
 ### Tips
 
  1. Run [bosh-lite].  It'll speed up testing and allow you to inspect the environment manually, if needed.
@@ -208,11 +219,11 @@ Integration tests expect to have a web server running on port 5000.  This is whe
 [PyEnv]:https://github.com/yyuu/pyenv
 [virtualenv]:http://www.virtualenv.org/en/latest/
 [pip]:http://www.pip-installer.org/en/latest/
-[required packages]:https://github.com/dmikusa-pivotal/cf-php-build-pack/blob/master/requirements.txt
+[required packages]:https://github.com/cloudfoundry/php-buildpack/blob/master/requirements.txt
 [bosh-lite]:https://github.com/cloudfoundry/bosh-lite
-[HTTPD]:https://github.com/dmikusa-pivotal/cf-php-build-pack/tree/master/lib/httpd
-[Nginx]:https://github.com/dmikusa-pivotal/cf-php-build-pack/tree/master/lib/nginx
-[PHP]:https://github.com/dmikusa-pivotal/cf-php-build-pack/tree/master/lib/php
-[NewRelic]:https://github.com/dmikusa-pivotal/cf-php-build-pack/tree/master/extensions/newrelic
-[unit tests]:https://github.com/dmikusa-pivotal/cf-php-build-pack/blob/master/docs/development.md#testing
+[HTTPD]:https://github.com/cloudfoundry/php-buildpack/tree/master/lib/httpd
+[Nginx]:https://github.com/cloudfoundry/php-buildpack/tree/master/lib/nginx
+[PHP]:https://github.com/cloudfoundry/php-buildpack/tree/master/lib/php
+[NewRelic]:https://github.com/cloudfoundry/php-buildpack/tree/master/extensions/newrelic
+[unit tests]:https://github.com/cloudfoundry/php-buildpack/blob/master/docs/development.md#testing
 

@@ -51,6 +51,8 @@ def setup_webdir_if_it_doesnt_exist(ctx):
                 '^%s$' % os.path.join(ctx['BUILD_DIR'], 'manifest.yml'))
             fu.where_name_does_not_match(
                 '^%s/.*$' % os.path.join(ctx['BUILD_DIR'], ctx['LIBDIR']))
+            fu.where_name_does_not_match(
+                '^%s/.*$' % os.path.join(ctx['BUILD_DIR'], '.profile.d'))
             fu.done()
 
 
@@ -80,7 +82,7 @@ def find_all_php_extensions(index_json):
     for version, files in index_json['php'].iteritems():
         for f in files:
             if f.endswith('.tar.gz'):
-                tmp = f.split('-')
+                tmp = os.path.basename(f).split('-')
                 if len(tmp) == 3 and tmp[1] not in SKIP:
                     exts[version].append(tmp[1])
     return exts
@@ -119,12 +121,6 @@ def convert_php_extensions(ctx):
     ctx['ZEND_EXTENSIONS'] = \
         "\n".join(['zend_extension="%s"' % os.path.join(path, "%s.so" % ze)
                    for ze in ctx['ZEND_EXTENSIONS']])
-
-
-def build_php_environment(ctx):
-    _log.debug('Building PHP environment variables')
-    ctx["PHP_ENV"] = \
-        "\n".join(["env[%s] = $%s" % (k, k) for k in os.environ.keys()])
 
 
 def is_web_app(ctx):

@@ -73,15 +73,14 @@ class PhpAssertHelper(object):
             .any_line()
                 .equals('php-fpm: $HOME/php/sbin/php-fpm -p '  # noqa
                         '"$HOME/php/etc" -y "$HOME/php/etc/php-fpm.conf"'
-                        ' -c "$HOME/php/etc"\n')
-                .equals('php-fpm-logs: tail -F $HOME/logs/php-fpm.log\n'))
+                        ' -c "$HOME/php/etc"\n'))
 
     def assert_contents_of_env_file(self, build_dir):
         fah = FileAssertHelper()
-        fah.expect().path(build_dir, '.env').exists()
+        fah.expect().path(build_dir, '.profile.d', 'bp_env_vars.sh').exists()
         tfah = TextFileAssertHelper()
         (tfah.expect()
-            .on_file(build_dir, '.env')
+            .on_file(build_dir, '.profile.d', 'bp_env_vars.sh')
             .any_line()
                 .equals('export '
                         'PATH=$PATH:$HOME/php/bin:$HOME/php/sbin\n')  # noqa
@@ -131,10 +130,10 @@ class HttpdAssertHelper(object):
 
     def assert_contents_of_env_file(self, build_dir):
         fah = FileAssertHelper()
-        fah.expect().path(build_dir, '.env').exists()
+        fah.expect().path(build_dir, '.profile.d', 'bp_env_vars.sh').exists()
         tfah = TextFileAssertHelper()
         (tfah.expect()
-            .on_file(build_dir, '.env')
+            .on_file(build_dir, '.profile.d', 'bp_env_vars.sh')
             .any_line()
             .equals('export HTTPD_SERVER_ADMIN=dan@mikusa.com\n'))
 
@@ -323,10 +322,10 @@ class HhvmAssertHelper(object):
 
     def assert_contents_of_env_file(self, build_dir):
         fah = FileAssertHelper()
-        fah.expect().path(build_dir, '.env').exists()
+        fah.expect().path(build_dir, '.profile.d', 'bp_env_vars.sh').exists()
         tfah = TextFileAssertHelper()
         (tfah.expect()
-            .on_file(build_dir, '.env')
+            .on_file(build_dir, '.profile.d', 'bp_env_vars.sh')
             .any_line()
             .equals('export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:'
                     '$HOME/hhvm/usr/lib/hhvm\n')
@@ -350,29 +349,9 @@ class HhvmAssertHelper(object):
                 .path('libstdc++.so.6')
             .exists())
 
-
-class CodizyAssertHelper(object):
-    """Helper to assert HHVM is installed and configured correctly."""
-
-    def assert_files_installed(self, build_dir):
-        fah = FileAssertHelper()
-        (fah.expect()
-            .root(build_dir, 'codizy', 'client', 'application')
-                .path('setup.php')  # noqa
-                .path('class', 'Codizy_utils.php')
-            .root(build_dir, 'php', 'lib', 'php', 'extensions',
-                  'no-debug-non-zts-20100525', reset=True)
-                .path('xhprof.so')
-                .path('ioncube.so')
-                .path('codizy.so')
-                .path('curl.so')
-                .path('gettext.so')
-                .path('mbstring.so')
-                .path('openssl.so')
-            .exists())
+    def assert_server_ini_contains(self, build_dir, expected_listener):
         tfah = TextFileAssertHelper()
         (tfah.expect()
-            .on_file(build_dir, 'php', 'etc', 'php.ini')
+            .on_file(build_dir, 'hhvm', 'etc', 'server.ini')
             .any_line()
-            .equals('auto_prepend_file = '
-                    '@{HOME}/codizy/client/application/setup.php\n'))
+            .contains(expected_listener))

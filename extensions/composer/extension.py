@@ -22,6 +22,7 @@ import sys
 import logging
 import re
 import json
+import StringIO
 from build_pack_utils import utils
 from build_pack_utils import stream_output
 from extension_helpers import ExtensionHelper
@@ -57,7 +58,7 @@ class ComposerConfiguration(object):
     def read_exts_from_path(self, path):
         exts = []
         if path:
-            req_pat = re.compile(r'"require"\: \{(.*?)\}', re.DOTALL)
+            req_pat = re.compile(r'"require"\s?\:\s?\{(.*?)\}', re.DOTALL)
             ext_pat = re.compile(r'"ext-(.*?)"')
             with open(path, 'rt') as fp:
                 data = fp.read()
@@ -114,6 +115,8 @@ class ComposerConfiguration(object):
             hhvm_version = self._read_version_from_composer('hhvm')
             if hhvm_version:
                 self._ctx['PHP_VM'] = 'hhvm'
+                self._log.debug('Composer picked HHVM Version [%s]',
+                                hhvm_version)
             else:
                 # update context with new list of extensions,
                 # if composer.json exists
@@ -136,7 +139,7 @@ class ComposerExtension(ExtensionHelper):
 
     def _defaults(self):
         return {
-            'COMPOSER_VERSION': '1.0.0-alpha8',
+            'COMPOSER_VERSION': '1.0.0-alpha9',
             'COMPOSER_PACKAGE': 'composer.phar',
             'COMPOSER_DOWNLOAD_URL': '{DOWNLOAD_URL}/composer/'
                                      '{COMPOSER_VERSION}/{COMPOSER_PACKAGE}',
@@ -155,6 +158,9 @@ class ComposerExtension(ExtensionHelper):
 
     def binary_path(self):
         return self.composer_strategy.binary_path()
+
+    def ld_library_path(self):
+        return self.composer_strategy.ld_library_path()
 
     def _compile(self, install):
         self._builder = install.builder
@@ -182,6 +188,45 @@ class ComposerExtension(ExtensionHelper):
             os.path.join(self._ctx['BUILD_DIR'], 'php', 'bin'),
             extract=False)
 
+    def _build_composer_environment(self):
+        env = {}
+        for key in os.environ.keys():
+            val = self._ctx.get(key, '')
+            env[key] = val if type(val) == str else json.dumps(val)
+
+        # add basic composer vars
+        env['COMPOSER_VENDOR_DIR'] = self._ctx['COMPOSER_VENDOR_DIR']
+        env['COMPOSER_BIN_DIR'] = self._ctx['COMPOSER_BIN_DIR']
+        env['COMPOSER_CACHE_DIR'] = self._ctx['COMPOSER_CACHE_DIR']
+        env['http_proxy'] = os.environ['http_proxy']
+        env['https_proxy'] = os.environ['https_proxy']
+        env['HTTP_PROXY'] = os.environ['HTTP_PROXY']
+        env['HTTPS_PROXY'] = os.environ['HTTPS_PROXY']
+
+        # prevent key system variables from being overridden
+        env['LD_LIBRARY_PATH'] = self.ld_library_path()
+        env['PHPRC'] = self._ctx['TMPDIR']
+        env['PATH'] = ':'.join(filter(None,
+                                      [env.get('PATH', ''),
+                                       os.path.dirname(self.binary_path())]))
+        return env
+
+    def _github_oauth_token_is_valid(self, candidate_oauth_token):
+        stringio_writer = StringIO.StringIO()
+
+        curl_command = 'curl -H "Authorization: token %s" https://api.github.com/rate_limit' % candidate_oauth_token
+
+        stream_output(stringio_writer,
+                      curl_command,
+                      env=os.environ,
+                      cwd=self._ctx['BUILD_DIR'],
+                      shell=True)
+
+        github_response = stringio_writer.getvalue()
+
+        github_response_json = json.loads(github_response)
+        return 'resources' in github_response_json
+
     def run(self):
         # Move composer files out of WEBDIR
         (self._builder.move()
@@ -207,36 +252,44 @@ class ComposerExtension(ExtensionHelper):
         # Run from /tmp/staged/app
         try:
             phpPath = self.binary_path()
-            phpCfg = os.path.join(self._ctx['TMPDIR'], 'php.ini')
             composerPath = os.path.join(self._ctx['BUILD_DIR'], 'php',
                                         'bin', 'composer.phar')
-            composerEnv = {
-                'LD_LIBRARY_PATH': os.path.join(self._ctx['BUILD_DIR'],
-                                                'php', 'lib'),
-                'HOME': self._ctx['BUILD_DIR'],
-                'COMPOSER_VENDOR_DIR': self._ctx['COMPOSER_VENDOR_DIR'],
-                'COMPOSER_BIN_DIR': self._ctx['COMPOSER_BIN_DIR'],
-                'COMPOSER_CACHE_DIR': self._ctx['COMPOSER_CACHE_DIR'],
-                'http_proxy': os.environ['http_proxy'],
-                'https_proxy': os.environ['https_proxy'],
-                'HTTP_PROXY': os.environ['HTTP_PROXY'],
-                'HTTPS_PROXY': os.environ['HTTPS_PROXY']
-            }
-            composerCmd = [phpPath,
-                           '-c "%s"' % phpCfg,
+
+            if os.getenv('COMPOSER_GITHUB_OAUTH_TOKEN', False):
+                github_oauth_token = os.getenv('COMPOSER_GITHUB_OAUTH_TOKEN')
+                if self._github_oauth_token_is_valid(github_oauth_token):
+                    print('-----> Using custom GitHub OAuth token in $COMPOSER_GITHUB_OAUTH_TOKEN')
+                    composer_oauth_config_command = [phpPath,
+                       composerPath,
+                       'config',
+                       '-g',
+                       'github-oauth.github.com',
+                       '"%s"' % github_oauth_token]
+                    output = stream_output(sys.stdout,
+                                           ' '.join(composer_oauth_config_command),
+                                           env=self._build_composer_environment(),
+                                           cwd=self._ctx['BUILD_DIR'],
+                                           shell=True)
+
+            composer_install_command = [phpPath,
                            composerPath,
                            'install',
                            '--no-progress']
-            composerCmd.extend(self._ctx['COMPOSER_INSTALL_OPTIONS'])
-            self._log.debug("Running [%s]", ' '.join(composerCmd))
+            composer_install_command.extend(self._ctx['COMPOSER_INSTALL_OPTIONS'])
+            self._log.debug("Running [%s]", ' '.join(composer_install_command))
+            self._log.debug("ENV IS: %s",
+                            '\n'.join(["%s=%s (%s)" % (key, val, type(val))
+                                       for (key, val) in self._build_composer_environment().iteritems()]))
             output = stream_output(sys.stdout,
-                                   ' '.join(composerCmd),
-                                   env=composerEnv,
+                                   ' '.join(composer_install_command),
+                                   env=self._build_composer_environment(),
                                    cwd=self._ctx['BUILD_DIR'],
                                    shell=True)
             _log.debug('composer output [%s]', output)
-        except Exception as e:
-            _log.error("Command Failed: %s", e)
+        except:
+            print "-----> Composer command failed"
+            _log.exception("Composer failed")
+            raise
 
 
 class HHVMComposerStrategy(object):
@@ -249,6 +302,10 @@ class HHVMComposerStrategy(object):
 
     def write_config(self, builder):
         pass
+
+    def ld_library_path(self):
+        return os.path.join(
+            self._ctx['BUILD_DIR'], 'hhvm', 'usr', 'lib', 'hhvm')
 
 
 class PHPComposerStrategy(object):
@@ -270,6 +327,11 @@ class PHPComposerStrategy(object):
                            {'TMPDIR': self._ctx['TMPDIR'],
                             'HOME': self._ctx['BUILD_DIR']},
                            delim='@')
+
+    def ld_library_path(self):
+        return os.path.join(
+            self._ctx['BUILD_DIR'], 'php', 'lib')
+
 
 
 # Extension Methods
