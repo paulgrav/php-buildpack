@@ -25,7 +25,7 @@ class PHPConfigChooser(PHPExtensionHelper):
         and deletes the environment specific ini files that do not match the
         specified environment.
         """
-        if not os.path.exists(path):
+        if not path or not os.path.exists(path):
             _log.info('Path not found: %s' % path)
             return
 
